@@ -1,197 +1,124 @@
 const TOTAL_EXAMS = 10;
-const FORMAT = { mcq: 18, tf: 4, sa: 6 }; // 18 Trắc nghiệm, 4 Đúng/Sai, 6 Trả lời ngắn
 let currentExamId = null;
 let currentAnswers = {};
 
-// Khởi tạo ứng dụng
 document.addEventListener("DOMContentLoaded", () => {
     renderExamList();
-
     document.getElementById("btn-back").addEventListener("click", () => {
-        if (confirm("Dữ liệu đang làm sẽ bị mất nếu chưa nộp. Bạn có chắc muốn quay lại?")) {
-            showScreen("home-screen");
-        }
+        if (confirm("Dữ liệu đang điền sẽ bị mất. Bạn có chắc muốn quay lại?")) showScreen("home-screen");
     });
-
     document.getElementById("btn-submit").addEventListener("click", submitExam);
 });
 
-// Quản lý chuyển đổi màn hình
 function showScreen(screenId) {
     document.getElementById("home-screen").classList.add("hidden");
     document.getElementById("exam-screen").classList.add("hidden");
     document.getElementById(screenId).classList.remove("hidden");
 }
 
-// Render danh sách 10 đề ở trang chủ
 function renderExamList() {
     const listDiv = document.getElementById("exam-list");
     listDiv.innerHTML = "";
-
     for (let i = 1; i <= TOTAL_EXAMS; i++) {
         const isSubmitted = localStorage.getItem(`exam_${i}_submitted`) === "true";
-        
         const card = document.createElement("div");
         card.className = `exam-card ${isSubmitted ? "locked" : ""}`;
-        
-        let htmlContent = `Đề thi số ${i}`;
-        if (isSubmitted) {
-            htmlContent += `<span class="locked-badge">✓ Đã nộp</span>`;
-        }
-        card.innerHTML = htmlContent;
-
+        card.innerHTML = `Đề thi số ${i} ${isSubmitted ? "<br><span style='color:green;font-size:0.8rem'>✓ Đã nộp</span>" : ""}`;
         card.addEventListener("click", () => {
             if (!isSubmitted) startExam(i);
             else alert("Bạn đã nộp đề này, không thể làm lại trên thiết bị này.");
         });
-
         listDiv.appendChild(card);
     }
 }
 
-// Bắt đầu làm một đề cụ thể
 function startExam(id) {
     currentExamId = id;
     currentAnswers = {};
     document.getElementById("exam-title").innerText = `Đề thi số ${id}`;
-    document.getElementById("exam-form").reset();
     
-    generateExamContent();
-    updateAnswerSheet();
+    // Gắn trực tiếp file PDF tương ứng
+    document.getElementById("pdf-frame").src = `pdfs/de${id}.pdf`;
+    
+    document.getElementById("answer-form").reset();
+    renderAnswerForm();
     updateProgressBar();
     showScreen("exam-screen");
-    window.scrollTo(0, 0);
 }
 
-// Sinh giao diện câu hỏi (Demo dữ liệu mẫu)
-function generateExamContent() {
-    const container = document.getElementById("questions-container");
+function renderAnswerForm() {
+    const container = document.getElementById("answers-container");
     container.innerHTML = "";
-    let questionCounter = 1;
 
-    // PHẦN 1: 18 câu trắc nghiệm
-    container.innerHTML += `<h3 class="part-title">Phần I: Câu trắc nghiệm nhiều phương án lựa chọn</h3>`;
-    for (let i = 1; i <= FORMAT.mcq; i++) {
-        container.appendChild(createMCQBox(questionCounter));
-        questionCounter++;
+    // Phần I: 18 câu trắc nghiệm (1-18)
+    container.innerHTML += `<div class="part-title">Phần I: Trắc nghiệm 4 lựa chọn</div>`;
+    for (let i = 1; i <= 18; i++) {
+        container.innerHTML += `
+            <div class="q-row">
+                <span class="q-label">Câu ${i}</span>
+                <div class="mcq-options">
+                    ${['A', 'B', 'C', 'D'].map(opt => `
+                        <label><input type="radio" name="q${i}" value="${opt}" onchange="recordAnswer('q${i}', '${opt}')"><span>${opt}</span></label>
+                    `).join('')}
+                </div>
+            </div>`;
     }
 
-    // PHẦN 2: 4 câu đúng/sai
-    container.innerHTML += `<h3 class="part-title">Phần II: Câu trắc nghiệm Đúng/Sai</h3>`;
-    for (let i = 1; i <= FORMAT.tf; i++) {
-        container.appendChild(createTFBox(questionCounter));
-        questionCounter++;
+    // Phần II: 4 câu Đúng/Sai (19-22), mỗi câu 4 ý a,b,c,d
+    container.innerHTML += `<div class="part-title">Phần II: Đúng / Sai</div>`;
+    for (let i = 19; i <= 22; i++) {
+        container.innerHTML += `<div style="font-weight:bold; margin-top:10px;">Câu ${i}</div>`;
+        ['a', 'b', 'c', 'd'].map(sub => {
+            let qKey = `q${i}_${sub}`;
+            container.innerHTML += `
+                <div class="q-row tf-sub">
+                    <span class="q-label">Ý ${sub})</span>
+                    <div class="tf-options">
+                        <label><input type="radio" name="${qKey}" value="Đ" onchange="recordAnswer('${qKey}', 'Đ')"><span>Đúng</span></label>
+                        <label><input type="radio" name="${qKey}" value="S" onchange="recordAnswer('${qKey}', 'S')"><span>Sai</span></label>
+                    </div>
+                </div>`;
+        });
     }
 
-    // PHẦN 3: 6 câu trả lời ngắn
-    container.innerHTML += `<h3 class="part-title">Phần III: Câu trắc nghiệm trả lời ngắn</h3>`;
-    for (let i = 1; i <= FORMAT.sa; i++) {
-        container.appendChild(createSABox(questionCounter));
-        questionCounter++;
+    // Phần III: 6 câu Trả lời ngắn (23-28)
+    container.innerHTML += `<div class="part-title">Phần III: Trả lời ngắn</div>`;
+    for (let i = 23; i <= 28; i++) {
+        container.innerHTML += `
+            <div style="margin-top:10px;">
+                <div class="q-label">Câu ${i}</div>
+                <input type="text" class="short-answer" placeholder="Nhập đáp án..." oninput="recordAnswer('q${i}', this.value)">
+            </div>`;
     }
 }
 
-// Khung câu hỏi Trắc nghiệm 4 đáp án
-function createMCQBox(qNum) {
-    const div = document.createElement("div");
-    div.className = "question-box";
-    const options = ['A', 'B', 'C', 'D'];
-    let html = `<div class="question-title">Câu ${qNum}: Nội dung câu hỏi trắc nghiệm số ${qNum} của đề ${currentExamId}...</div><div class="options-group">`;
-    options.forEach(opt => {
-        html += `
-            <label class="option-label">
-                <input type="radio" name="q${qNum}" value="${opt}" onchange="recordAnswer(${qNum}, '${opt}')">
-                ${opt}. Nội dung phương án ${opt}
-            </label>
-        `;
-    });
-    html += `</div>`;
-    div.innerHTML = html;
-    return div;
-}
-
-// Khung câu hỏi Đúng / Sai
-function createTFBox(qNum) {
-    const div = document.createElement("div");
-    div.className = "question-box";
-    let html = `<div class="question-title">Câu ${qNum}: Nội dung nhận định số ${qNum}. Chọn Đúng hoặc Sai.</div><div class="options-group">`;
-    html += `
-        <label class="option-label"><input type="radio" name="q${qNum}" value="Đúng" onchange="recordAnswer(${qNum}, 'Đúng')"> Đúng</label>
-        <label class="option-label"><input type="radio" name="q${qNum}" value="Sai" onchange="recordAnswer(${qNum}, 'Sai')"> Sai</label>
-    `;
-    html += `</div>`;
-    div.innerHTML = html;
-    return div;
-}
-
-// Khung câu hỏi trả lời ngắn
-function createSABox(qNum) {
-    const div = document.createElement("div");
-    div.className = "question-box";
-    div.innerHTML = `
-        <div class="question-title">Câu ${qNum}: Nội dung câu hỏi trả lời ngắn số ${qNum}...</div>
-        <input type="text" class="short-answer-input" placeholder="Nhập câu trả lời của bạn..." 
-               oninput="recordAnswer(${qNum}, this.value)">
-    `;
-    return div;
-}
-
-// Ghi nhận đáp án khi học sinh thao tác
-window.recordAnswer = function(qNum, value) {
-    if (value.trim() === "") {
-        delete currentAnswers[qNum];
-    } else {
-        currentAnswers[qNum] = value;
-    }
-    updateAnswerSheet();
+window.recordAnswer = function(key, value) {
+    if (value.trim() === "") delete currentAnswers[key];
+    else currentAnswers[key] = value;
     updateProgressBar();
 }
 
-// Cập nhật thanh tiến trình
 function updateProgressBar() {
-    const totalQuestions = FORMAT.mcq + FORMAT.tf + FORMAT.sa;
+    // 18 câu P1 + 16 ý P2 + 6 câu P3 = 40 trường cần nhập
+    const totalFields = 18 + 16 + 6; 
     const answeredCount = Object.keys(currentAnswers).length;
-    const percent = (answeredCount / totalQuestions) * 100;
-    document.getElementById("progress-bar").style.width = percent + "%";
+    document.getElementById("progress-bar").style.width = `${(answeredCount / totalFields) * 100}%`;
 }
 
-// Cập nhật bảng tóm tắt đáp án dưới cùng
-function updateAnswerSheet() {
-    const grid = document.getElementById("answer-grid");
-    grid.innerHTML = "";
-    const totalQuestions = FORMAT.mcq + FORMAT.tf + FORMAT.sa;
-
-    for (let i = 1; i <= totalQuestions; i++) {
-        const div = document.createElement("div");
-        div.className = `sheet-item ${currentAnswers[i] ? "filled" : ""}`;
-        
-        let displayVal = currentAnswers[i] || "-";
-        // Rút gọn chữ nếu là trả lời ngắn quá dài
-        if (displayVal.length > 5) displayVal = "..."; 
-        
-        div.innerHTML = `<strong>${i}</strong><br>${displayVal}`;
-        grid.appendChild(div);
-    }
-}
-
-// Xử lý nút Nộp bài
 function submitExam() {
-    const totalQuestions = FORMAT.mcq + FORMAT.tf + FORMAT.sa;
+    const totalFields = 40;
     const answeredCount = Object.keys(currentAnswers).length;
 
-    if (answeredCount < totalQuestions) {
-        if (!confirm(`Bạn mới làm ${answeredCount}/${totalQuestions} câu. Bạn có chắc chắn muốn nộp bài?`)) {
-            return;
-        }
+    if (answeredCount < totalFields) {
+        if (!confirm(`Bạn mới làm ${answeredCount}/${totalFields} ô đáp án. Xác nhận nộp?`)) return;
     } else {
-        if (!confirm("Xác nhận nộp bài? Đề sẽ bị khóa sau khi nộp.")) return;
+        if (!confirm("Xác nhận nộp bài?")) return;
     }
 
-    // Lưu trạng thái và đáp án vào localStorage
     localStorage.setItem(`exam_${currentExamId}_submitted`, "true");
     localStorage.setItem(`exam_${currentExamId}_answers`, JSON.stringify(currentAnswers));
-
-    alert("✅ Nộp bài thành công! Đáp án của bạn đã được lưu lại.");
+    
+    alert("✅ Nộp bài thành công!");
     renderExamList();
     showScreen("home-screen");
 }
