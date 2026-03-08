@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống thi Sinh học</title>
+    <title>Hệ thống thi Sinh học 2026</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>LUYỆN THI SINH HỌC CHƯƠNG TRÌNH MỚI</h1>
+        <h1>LUYỆN ĐỀ VIP SINH HỌC 2026</h1>
     </header>
 
     <main class="container">
         <div id="home-screen">
             <h2>Danh sách đề thi</h2>
-            <p>Chọn một đề để bắt đầu làm bài. Đề đã nộp sẽ bị khóa.</p>
             <div id="exam-list" class="grid-list"></div>
         </div>
 
@@ -24,22 +23,23 @@
                 <h2 id="exam-title">Đề thi số X</h2>
             </div>
             
-            <div class="progress-container">
-                <div id="progress-bar" class="progress-bar"></div>
+            <div class="exam-layout">
+                <div class="pdf-viewer">
+                    <iframe id="pdf-frame" src="" width="100%" height="100%" style="border: none;"></iframe>
+                </div>
+
+                <div class="answer-panel">
+                    <div class="progress-container">
+                        <div id="progress-bar" class="progress-bar"></div>
+                    </div>
+                    
+                    <h3>PHIẾU TRẢ LỜI</h3>
+                    <form id="answer-form">
+                        <div id="answers-container"></div>
+                        <button type="button" id="btn-submit" class="btn-primary" style="margin-top: 20px;">Nộp bài</button>
+                    </form>
+                </div>
             </div>
-
-            <form id="exam-form">
-                <div id="questions-container"></div>
-                
-                <div class="answer-sheet">
-                    <h3>Bảng tóm tắt đáp án</h3>
-                    <div id="answer-grid" class="answer-grid"></div>
-                </div>
-
-                <div class="submit-section">
-                    <button type="button" id="btn-submit" class="btn-primary">Nộp bài</button>
-                </div>
-            </form>
         </div>
     </main>
 
